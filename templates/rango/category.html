@@ -1,0 +1,19 @@
+<!DOCTYPE html>{% load staticfiles %}
+<html>
+    <head>
+        <title>Rango</title>
+    </head>
+    <body>
+        <h1>{{ category_name }}</h1>
+        {% if pages %}
+        <ul>
+            {% for page in pages %}
+            <li><a href="{{ page.url }}">{{ page.title }}</a></li>
+            {% endfor %}
+        </ul>
+        <a href="/rango/{{ category_name_url }}/add_page/">Add page to category</a>
+        {% else %}
+        <strong>No pages currently in category.</strong>
+        {% endif %}
+    </body>
+</html>
