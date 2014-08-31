@@ -67,6 +67,9 @@ DATABASES = {
     }
 }
 
+# login url
+LOGIN_URL = '/rango/login/'
+
 # Internationalization
 # https://docs.djangoproject.com/en/1.6/topics/i18n/
 
@@ -85,9 +88,9 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/1.6/howto/static-files/
 
 # static files
-STATIC_PATH = os.path.join(BASE_DIR,'static')
+STATIC_PATH = os.path.join(BASE_DIR, 'static')
 
-STATIC_URL = '/static/' # You may find this is already defined as such.
+STATIC_URL = '/static/'  # You may find this is already defined as such.
 
 STATICFILES_DIRS = (
     STATIC_PATH,

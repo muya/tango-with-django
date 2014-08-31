@@ -1,18 +1,17 @@
-<!DOCTYPE html>{% load staticfiles %}
-<html>
+{% extends "rango/base.html" %}
+{% load staticfiles %}
 
-<head>
-    <title>About Rango</title>
-</head>
+{% block title %}
+    About Rango
+{% endblock title %}
 
-<body>
+{% block body_block %}
     <h1>About Rango says...</h1>
-    {{ message }}
-    <strong>{{ message }}</strong>
-    <br>
-    <a href="/rango/">Home</a>
-    <br>
+    {{ message }}<br>
+    <strong>{{ message }}</strong><br>
     <img src="/media/rango.jpg" alt="Picture of Rango" />
-</body>
 
-</html>
+    <p>
+      You have visited this site {{ visit_count }} time(s) before.
+    </p>
+{% endblock body_block %}

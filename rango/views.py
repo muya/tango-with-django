@@ -1,12 +1,17 @@
+from datetime import datetime
+
 from django.shortcuts import render
-from django.http import HttpResponse
+from django.http import HttpResponse, HttpResponseRedirect
 from django.template import RequestContext
 from django.shortcuts import render_to_response
+from django.contrib.auth import authenticate, login, logout
+from django.contrib.auth.decorators import login_required
 
 from rango.models import Category
 from rango.models import Page
 from rango.forms import CategoryForm
 from rango.forms import PageForm
+from rango.forms import UserForm, UserProfileForm
 
 
 def index(request):
@@ -27,12 +32,31 @@ def index(request):
     for category in category_list_viewed:
         category.url = category.name.replace(' ', '_')
 
-    return render_to_response('rango/index.html', context_dict, context)
+    # obtain our response object early so that we can add cookie info
+    response = render_to_response('rango/index.html', context_dict, context)
 
+    if request.session.get('last_visit'):
+        last_visit = request.session.get('last_visit')
+        visits = request.session.get('visits', 0)
+
+        last_visit_time = datetime.strptime(last_visit[:-7],
+                                            "%Y-%m-%d %H:%M:%S")
+
+        if (datetime.now() - last_visit_time).days > 0:
+            request.session['visits'] = visits + 1
+            request.session['last_visit'] = str(datetime.now())
+    else:
+        request.session['last_visit'] = str(datetime.now())
+        request.session['visits'] = 1
+
+    return response
 
 def about(request):
     context = RequestContext(request)
-    context_dict = {'message': "Here is the about page"}
+    context_dict = {
+        'message': 'Here is the about page',
+        'visit_count': request.session.get('visits', 0)
+    }
     return render_to_response('rango/about.html', context_dict, context)
 
 
@@ -64,6 +88,7 @@ def category(request, category_name_url):
     return render_to_response('rango/category.html', context_dict, context)
 
 
+@login_required
 def add_category(request):
     # get context from request
     context = RequestContext(request)
@@ -92,6 +117,7 @@ def add_category(request):
         'rango/add_category.html', {'form': form}, context)
 
 
+@login_required
 def add_page(request, category_name_url):
     context = RequestContext(request)
 
@@ -127,6 +153,94 @@ def add_page(request, category_name_url):
         {'category_name_url': category_name_url,
          'category_name': category_name, 'form': form},
         context)
+
+
+def register(request):
+    context = RequestContext(request)
+
+    # to check if registration was successful
+    registered = False
+
+    # process form data if it's POST
+    if request.method == 'POST':
+        # grab info from form (both UserForm & UserProfileForm)
+        user_form = UserForm(data=request.POST)
+        profile_form = UserProfileForm(data=request.POST)
+
+        # if both are valid
+        if user_form.is_valid() and profile_form.is_valid():
+            # save user form data to db
+            user = user_form.save()
+
+            # hash password and update
+            user.set_password(user.password)
+            user.save()
+
+            # now UserProfile instance
+            profile = profile_form.save(commit=False)
+            profile.user = user
+
+            # if user provided profile pic, get it from input form
+            if 'picture' in request.FILES:
+                profile.picture = request.FILES['picture']
+
+            # save the instance
+            profile.save()
+
+            # registraton was successful
+            registered = True
+        else:
+            print user_form.errors, profile_form.errors
+    else:
+        user_form = UserForm()
+        profile_form = UserProfileForm()
+
+    return render_to_response(
+        'rango/register.html',
+        {
+            'user_form': user_form,
+            'profile_form': profile_form,
+            'registered': registered
+        },
+        context
+    )
+
+
+def user_login(request):
+    context = RequestContext(request)
+
+    if request.method == 'POST':
+        username = request.POST['username']
+        password = request.POST['password']
+
+        user = authenticate(username=username, password=password)
+
+        if user:
+            if user.is_active:
+                login(request, user)
+                return HttpResponseRedirect('/rango/')
+            else:
+                return HttpResponse('Your Rango account is disabled')
+        else:
+            print "Invalid login details: {0} {1}".format(username, password)
+            return HttpResponse("Invalid login credentials provided")
+    else:
+        return render_to_response('rango/login.html', {}, context)
+
+
+@login_required
+def user_logout(request):
+    logout(request)
+
+    # take user back to login page
+    return HttpResponseRedirect('/rango/')
+
+
+@login_required
+def restricted(request):
+    return render_to_response("rango/restricted.html", {
+        "message": "Since you're logged in, you can see this text!"},
+        RequestContext(request))
 
 
 def decode_url(encoded_url):
